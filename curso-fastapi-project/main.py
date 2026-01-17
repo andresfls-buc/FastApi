@@ -1,8 +1,19 @@
 import zoneinfo
 
 from datetime import datetime
-
 from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from datetime import datetime
+from pydantic import BaseModel
+
+# Define a Pydantic model for customer data
+
+class Customer(BaseModel):
+    name: str
+    description: str | None
+    email: str
+    age: int
+
 
 
 app = FastAPI()
@@ -18,6 +29,7 @@ country_timezones = {
     "IN": "Asia/Kolkata",
     "JP": "Asia/Tokyo",
     "AU": "Australia/Sydney",
+    "CO": "America/Bogota",
 }
 
 
@@ -32,3 +44,58 @@ async def time(iso_code: str):
     tz = zoneinfo.ZoneInfo(timezone_str)
 
     return {"time": datetime.now(tz)}
+
+
+
+
+
+
+@app.get("/convert-time")
+def convert_time_format(time_str: str):
+    """
+    Endpoint to convert a 12-hour time string to 24-hour format.
+    Example input: '03:30 PM' -> Output: '15:30'
+    """
+    try:
+        # 1. Parse the string into a datetime object
+        # %I is 12h clock, %M is minutes, %p is AM/PM
+        time_obj = datetime.strptime(time_str, "%I:%M %p")
+        
+        # 2. Format the object into a 24-hour string
+        # %H is 24h clock
+        time_24h = time_obj.strftime("%H:%M")
+        
+        return {
+            "original": time_str,
+            "converted_24h": time_24h
+        }
+    except ValueError:
+        # 3. If the format doesn't match '00:00 AM/PM', raise an error
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid time format. Please use 'HH:MM AM/PM' (e.g., 03:30 PM)"
+        )
+
+# Endpoint that returns both current time and converted time.
+@app.get("/current-time")
+def convert_time_format(time_str: str):
+
+    time_obj = datetime.strptime(time_str, "%I:%M %p")
+    converted_time = time_obj.strftime("%I:%M %p")
+
+    now_obj =  datetime.now()
+
+    current_time_24h = now_obj.strftime("%Y-%m-%d %H:%M:%S")
+    return {
+        "converted_time": converted_time,
+        "current_time": current_time_24h
+        }
+
+@app.post("/customers")
+async def create_customer(customer_data: Customer):
+
+    
+    return customer_data
+
+# To run this:
+# fastapi dev main.py
