@@ -4,15 +4,9 @@ from datetime import datetime
 from fastapi import FastAPI
 from fastapi import FastAPI, HTTPException
 from datetime import datetime
-from pydantic import BaseModel
+from models import Customer, Transaction , Invoice
 
-# Define a Pydantic model for customer data
 
-class Customer(BaseModel):
-    name: str
-    description: str | None
-    email: str
-    age: int
 
 
 
@@ -93,9 +87,15 @@ def convert_time_format(time_str: str):
 
 @app.post("/customers")
 async def create_customer(customer_data: Customer):
-
-    
     return customer_data
+
+@app.post("/transactions")
+async def create_transaction(transaction_data: Transaction):
+    return transaction_data
+
+@app.post("/invoices")
+async def create_invoice(invoice_data: Invoice):
+    return invoice_data
 
 # To run this:
 # fastapi dev main.py
