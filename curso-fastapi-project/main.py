@@ -4,14 +4,16 @@ from datetime import datetime
 from fastapi import FastAPI
 from fastapi import FastAPI, HTTPException
 from datetime import datetime
+
+from sqlmodel import select
 from models import Customer, Transaction , Invoice
-from db import SessionDep
+from db import SessionDep, create_all_tables
 
 
 
 
 
-app = FastAPI()
+app = FastAPI(lifespan=create_all_tables)
 
 @app.get("/")
 async def root():
@@ -86,9 +88,23 @@ def convert_time_format(time_str: str):
         "current_time": current_time_24h
         }
 
+# create customer
+
 @app.post("/customers")
 async def create_customer(customer_data: Customer, session: SessionDep):
-    return customer_data
+    customer = Customer.model_validate(customer_data.model_dump())
+    session.add(customer)
+    session.commit()
+    session.refresh(customer)
+
+    return customer
+
+# Get customer list
+
+@app.get("/customers", response_model=list[Customer])
+async def list_customer(session: SessionDep):
+    return session.exec(select(Customer)).all()
+   
 
 @app.post("/transactions")
 async def create_transaction(transaction_data: Transaction):

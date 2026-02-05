@@ -8,10 +8,10 @@ class CustomerBase(SQLModel):
     """
     Shared fields. Both the DB and the API will use these.
     """
-    name: str
-    description: Optional[str] = None
-    email: EmailStr
-    age: int
+    name: str = Field(default = None)
+    description: str | None = Field(default=None)
+    email: EmailStr = Field(default=None)
+    age: int = Field(default=None, ge=0, le=120)  # Age must be between 0 and 120
 
 class CustomerCreate(CustomerBase):
     """
@@ -25,7 +25,7 @@ class Customer(CustomerBase, table=True):
     The actual SQLite Table.
     Includes the ID which is the Primary Key.
     """
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int |  None = Field(default=None, primary_key=True)
 
 
 # --- 2. TRANSACTION & INVOICE MODELS ---

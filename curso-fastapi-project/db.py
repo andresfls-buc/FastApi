@@ -11,6 +11,10 @@ sqlite_url= f"sqlite:///{sqlite_name}"
 #echo=True to see the SQL commands in the console
 engine = create_engine(sqlite_url , echo=True)
 
+def create_all_tables(app: FastAPI):
+    SQLModel.metadata.create_all(engine)
+    yield
+
 def get_session():
     with Session(engine) as session:
         yield session
