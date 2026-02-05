@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi import FastAPI, HTTPException
 from datetime import datetime
 from models import Customer, Transaction , Invoice
+from db import SessionDep
 
 
 
@@ -86,7 +87,7 @@ def convert_time_format(time_str: str):
         }
 
 @app.post("/customers")
-async def create_customer(customer_data: Customer):
+async def create_customer(customer_data: Customer, session: SessionDep):
     return customer_data
 
 @app.post("/transactions")
