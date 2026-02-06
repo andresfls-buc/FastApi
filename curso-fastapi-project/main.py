@@ -2,11 +2,11 @@ import zoneinfo
 
 from datetime import datetime
 from fastapi import FastAPI
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException , status
 from datetime import datetime
 
 from sqlmodel import select
-from models import Customer, Transaction , Invoice
+from models import Customer, CustomerCreate, TransactionCreate, Transaction , Invoice
 from db import SessionDep, create_all_tables
 
 
@@ -91,7 +91,7 @@ def convert_time_format(time_str: str):
 # create customer
 
 @app.post("/customers")
-async def create_customer(customer_data: Customer, session: SessionDep):
+async def create_customer(customer_data: CustomerCreate, session: SessionDep):
     customer = Customer.model_validate(customer_data.model_dump())
     session.add(customer)
     session.commit()
@@ -99,16 +99,61 @@ async def create_customer(customer_data: Customer, session: SessionDep):
 
     return customer
 
+
+
+
 # Get customer list
 
 @app.get("/customers", response_model=list[Customer])
 async def list_customer(session: SessionDep):
     return session.exec(select(Customer)).all()
    
+# Get customer by ID
+    
+@app.get("/customers/{customer_id}", response_model=Customer)
+async def get_customer(customer_id: int, session: SessionDep):
+    customer = session.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    return customer
+
+
+# Delete customer by ID
+
+
+@app.delete("/customers/{customer_id}")
+async def delete_customer(customer_id: int, session: SessionDep):
+    customer = session.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    session.delete(customer)
+    session.commit()
+    return {"message": "Customer deleted successfully"}
+
+# Update customer by ID
+@app.put("/customers/{customer_id}", response_model=Customer)
+async def update_customer(customer_id: int, customer_data: Customer, session: SessionDep):
+    customer = session.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    customer_data_dict = customer_data.model_dump(exclude_unset=True)
+    for key, value in customer_data_dict.items():
+        setattr(customer, key, value)
+    session.add(customer)
+    session.commit()
+    session.refresh(customer)
+    return customer
+
+# Create transaction and invoice
 
 @app.post("/transactions")
-async def create_transaction(transaction_data: Transaction):
+async def create_transaction(transaction_data: TransactionCreate):
     return transaction_data
+
+# Get transaction list
+@app.get("/transactions", response_model=list[Transaction])
+async def list_transaction(session: SessionDep):
+    return session.exec(select(Transaction)).all()
 
 @app.post("/invoices")
 async def create_invoice(invoice_data: Invoice):
