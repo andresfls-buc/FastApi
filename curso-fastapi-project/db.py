@@ -1,5 +1,5 @@
 from typing import Annotated
-
+from fastapi import FastAPI
 from fastapi.params import Depends
 from sqlmodel import create_engine
 # we must import Session from sqlmodel, so pylance recognizes it correctly
