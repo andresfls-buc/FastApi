@@ -1,5 +1,6 @@
 import zoneinfo
 
+from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI , HTTPException 
 from datetime import datetime
@@ -11,8 +12,18 @@ from routers import customers , transactions , invoices
 
 
 
+# 2. Define the lifespan wrapper
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # This happens ON STARTUP
+    create_all_tables() 
+    print("Database tables initialized!")
+    yield
+    # This happens ON SHUTDOWN (if you need to close connections)
 
+# 3. Pass the wrapper to FastAPI
 app = FastAPI(lifespan=create_all_tables)
+
 app.include_router(customers.router)
 app.include_router(transactions.router)
 app.include_router(invoices.router)

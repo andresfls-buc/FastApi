@@ -1,5 +1,5 @@
 from pydantic import EmailStr
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship 
 from typing import List, Optional
 
 # --- 1. CUSTOMER MODELS ---
@@ -11,37 +11,48 @@ class CustomerBase(SQLModel):
     age: int = Field(default=None, ge=0, le=120)
 
 class CustomerCreate(CustomerBase):
-    # This remains empty because it only needs what's in CustomerBase
     pass
 
 class Customer(CustomerBase, table=True):
-    # primary_key=True tells the DB to handle auto-incrementing
-    # The 'None' default allows the DB to generate the value without Python complaining
     id: int | None = Field(default=None, primary_key=True)
+    # Correct: Points to Transaction.customer and Invoice.customer
+    transactions: List["Transaction"] = Relationship(back_populates="customer")
+    invoices: List["Invoice"] = Relationship(back_populates="customer")
 
 
 # --- 2. TRANSACTION & INVOICE MODELS ---
 
-class TransactionCreate(SQLModel):
-    """Created a 'Create' version so users don't have to guess the Transaction ID either."""
+class TransactionBase(SQLModel):
     amount: int
     description: str
+    customer_id: int = Field(foreign_key="customer.id")
 
-class Transaction(TransactionCreate, table=True):
-    """The actual DB table for Transactions."""
-    id: int | None = Field(default=None, primary_key=True)
+class TransactionCreate(TransactionBase):
+    pass
 
-
-class Invoice(SQLModel):
+class Transaction(TransactionBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     
-    # FIX: Use 'CustomerCreate' instead of 'Customer' 
-    # This removes the 'id' requirement from the POST request body
-    customer: CustomerCreate 
+    # Handshake with Customer.transactions
+    customer: Optional["Customer"] = Relationship(back_populates="transactions")
     
-    # FIX: Use 'TransactionCreate' for the same reason
-    transactions: List[TransactionCreate]
+    # Links to the ID in the DB
+    invoice_id: int | None = Field(default=None, foreign_key="invoice.id")
+    # Handshake with Invoice.transactions
+    invoice: Optional["Invoice"] = Relationship(back_populates="transactions")
+
+
+class Invoice(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    customer_id: int = Field(foreign_key="customer.id")
+
+    # Handshake with Transaction.invoice
+    transactions: List["Transaction"] = Relationship(back_populates="invoice")
+    
+    # Handshake with Customer.invoices
+    customer: Optional["Customer"] = Relationship(back_populates="invoices")
 
     @property
     def total_price(self) -> int:
+        # This works because of the Relationship above
         return sum(t.amount for t in self.transactions)
