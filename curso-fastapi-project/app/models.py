@@ -2,6 +2,25 @@ from pydantic import EmailStr
 from sqlmodel import SQLModel, Field, Relationship 
 from typing import List, Optional
 
+
+# --- Plan Models ---
+
+class CustomerPlan(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    plan_id: int = Field(foreign_key="plan.id", primary_key=True)
+    customer_id: int = Field(foreign_key="customer.id", primary_key=True)
+
+
+class Plan(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(default=None)
+    price: int = Field(default=None)
+    description: str = Field(default=None)
+    customers: list["Customer"] = Relationship(back_populates="plans", link_model=CustomerPlan)
+
+
+
+
 # --- 1. CUSTOMER MODELS ---
 
 class CustomerBase(SQLModel):
@@ -18,6 +37,7 @@ class Customer(CustomerBase, table=True):
     # Correct: Points to Transaction.customer and Invoice.customer
     transactions: List["Transaction"] = Relationship(back_populates="customer")
     invoices: List["Invoice"] = Relationship(back_populates="customer")
+    plans: list["Plan"] = Relationship(back_populates="customers", link_model=CustomerPlan)
 
 
 # --- 2. TRANSACTION & INVOICE MODELS ---
