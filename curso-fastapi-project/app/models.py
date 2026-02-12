@@ -2,24 +2,21 @@ from pydantic import EmailStr
 from sqlmodel import SQLModel, Field, Relationship 
 from typing import List, Optional
 
-
 # --- Plan Models ---
 
 class CustomerPlan(SQLModel, table=True):
-    id: int = Field(default=None, primary_key=True)
-    plan_id: int = Field(foreign_key="plan.id", primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id", primary_key=True)
-
+    # Added | None = Field(default=None...) to ensure the DB generates the ID properly
+    id: int | None = Field(default=None, primary_key=True)
+    plan_id: int = Field(foreign_key="plan.id")
+    customer_id: int = Field(foreign_key="customer.id")
 
 class Plan(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(default=None)
     price: int = Field(default=None)
     description: str = Field(default=None)
+    # Relationship to Customer via CustomerPlan
     customers: list["Customer"] = Relationship(back_populates="plans", link_model=CustomerPlan)
-
-
-
 
 # --- 1. CUSTOMER MODELS ---
 
@@ -34,11 +31,19 @@ class CustomerCreate(CustomerBase):
 
 class Customer(CustomerBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    # Correct: Points to Transaction.customer and Invoice.customer
     transactions: List["Transaction"] = Relationship(back_populates="customer")
     invoices: List["Invoice"] = Relationship(back_populates="customer")
     plans: list["Plan"] = Relationship(back_populates="customers", link_model=CustomerPlan)
 
+# --- Response Models (The Firewalls) ---
+
+class CustomerRead(CustomerBase):
+    id: int
+
+class CustomerPlanRead(SQLModel):
+    id: int
+    customer_id: int
+    plan_id: int
 
 # --- 2. TRANSACTION & INVOICE MODELS ---
 
@@ -52,27 +57,16 @@ class TransactionCreate(TransactionBase):
 
 class Transaction(TransactionBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    
-    # Handshake with Customer.transactions
     customer: Optional["Customer"] = Relationship(back_populates="transactions")
-    
-    # Links to the ID in the DB
     invoice_id: int | None = Field(default=None, foreign_key="invoice.id")
-    # Handshake with Invoice.transactions
     invoice: Optional["Invoice"] = Relationship(back_populates="transactions")
-
 
 class Invoice(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     customer_id: int = Field(foreign_key="customer.id")
-
-    # Handshake with Transaction.invoice
     transactions: List["Transaction"] = Relationship(back_populates="invoice")
-    
-    # Handshake with Customer.invoices
     customer: Optional["Customer"] = Relationship(back_populates="invoices")
 
     @property
     def total_price(self) -> int:
-        # This works because of the Relationship above
         return sum(t.amount for t in self.transactions)
